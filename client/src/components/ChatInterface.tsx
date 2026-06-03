@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useChatHistory, useSendMessage } from "@/hooks/use-chat";
+import { type LocalChatMessage, useSendMessage } from "@/hooks/use-chat";
 import { Send, Mic, Volume2 } from "lucide-react";
 import { format } from "date-fns";
 
 export function ChatInterface() {
-  const { data: history, isLoading } = useChatHistory();
-  const { mutate: sendMessage, isPending } = useSendMessage();
+  const { mutateAsync: sendMessage, isPending } = useSendMessage();
+  const [history, setHistory] = useState<LocalChatMessage[]>([]);
   const [input, setInput] = useState("");
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -17,11 +17,44 @@ export function ChatInterface() {
     }
   }, [history]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!input.trim() || isPending) return;
-    sendMessage(input);
+    const text = input.trim();
+    const userMessage: LocalChatMessage = {
+      id: crypto.randomUUID(),
+      role: "user",
+      content: text,
+      createdAt: new Date().toISOString(),
+    };
+    setHistory((current) => [...current, userMessage]);
     setInput("");
+
+    try {
+      const response = await sendMessage(text);
+      const payload = response && typeof response === "object" && "response" in response
+        ? String((response as { response?: unknown }).response || "")
+        : JSON.stringify(response);
+      setHistory((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: payload || "Neron Core n'a pas retourne de reponse textuelle.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    } catch (error) {
+      setHistory((current) => [
+        ...current,
+        {
+          id: crypto.randomUUID(),
+          role: "assistant",
+          content: error instanceof Error ? error.message : "Erreur Core inconnue.",
+          createdAt: new Date().toISOString(),
+        },
+      ]);
+    }
   };
 
   return (
@@ -43,13 +76,7 @@ export function ChatInterface() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-4 font-mono text-sm custom-scrollbar" ref={scrollRef}>
-        {isLoading ? (
-          <div className="flex flex-col gap-2 opacity-50">
-            <div className="h-4 bg-primary/10 w-3/4 rounded animate-pulse" />
-            <div className="h-4 bg-primary/10 w-1/2 rounded animate-pulse" />
-            <div className="h-4 bg-primary/10 w-5/6 rounded animate-pulse" />
-          </div>
-        ) : (
+        {history.length ? (
           <AnimatePresence initial={false}>
             {history?.map((msg) => (
               <motion.div
@@ -95,6 +122,10 @@ export function ChatInterface() {
               </motion.div>
             )}
           </AnimatePresence>
+        ) : (
+          <div className="text-xs font-mono text-primary/50">
+            Les commandes sont envoyees a Neron Core via POST /input/text.
+          </div>
         )}
       </div>
 
@@ -102,7 +133,7 @@ export function ChatInterface() {
         <button 
           type="button" 
           className="p-2 text-primary/60 hover:text-primary hover:bg-primary/10 rounded transition-colors"
-          title="Voice Input (Simulation)"
+          title="Entree vocale non exposee par le dashboard"
         >
           <Mic size={20} />
         </button>
