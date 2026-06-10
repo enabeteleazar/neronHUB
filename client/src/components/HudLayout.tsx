@@ -1,6 +1,9 @@
 import { ReactNode } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Link, useLocation } from "wouter";
+import { asRecord } from "@/components/NeronData";
+import { getIdentity } from "@/services/neron-api";
 
 interface HudLayoutProps {
   children: ReactNode;
@@ -18,6 +21,14 @@ const navItems = [
 
 export function HudLayout({ children }: HudLayoutProps) {
   const [location] = useLocation();
+  const identityQuery = useQuery({
+    queryKey: ["neron", "identity"],
+    queryFn: getIdentity,
+    refetchInterval: 6000,
+  });
+  const identity = asRecord(asRecord(identityQuery.data?.data)?.identity);
+  const name = typeof identity?.name === "string" ? identity.name : "Dashboard";
+  const role = typeof identity?.role === "string" ? identity.role : "Core REST API";
 
   return (
     <div className="min-h-screen w-full relative overflow-hidden bg-[url('/images/jarvis_hud.jpeg')] bg-cover bg-center bg-no-repeat bg-blend-overlay bg-black/90">
@@ -33,10 +44,10 @@ export function HudLayout({ children }: HudLayoutProps) {
             className="flex flex-col"
           >
             <span className="border-l-2 border-primary pl-3 font-orbitron text-sm uppercase tracking-[0.2em]">
-              Neron Dashboard
+              {name} Dashboard
             </span>
             <span className="pl-3 font-mono text-xs text-primary/40">
-              Interface officielle via Core REST API
+              {role}
             </span>
           </motion.div>
 
@@ -71,7 +82,7 @@ export function HudLayout({ children }: HudLayoutProps) {
           </div>
           <div className="w-1/3 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
           <div className="uppercase">
-            Source: <span className="text-primary text-glow">Neron Core</span>
+            Source: <span className="text-primary text-glow">{name} Core</span>
           </div>
         </footer>
       </div>

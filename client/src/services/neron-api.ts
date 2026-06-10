@@ -125,6 +125,10 @@ export function getHealthCenter() {
   return requestNeron<NeronRecord>("/self-model/context");
 }
 
+export function getIdentity() {
+  return requestNeron<NeronRecord>("/self-model/context");
+}
+
 export function getSelfModel() {
   return bundle({
     status: requestNeron<NeronRecord>("/self-model/status"),

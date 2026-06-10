@@ -99,6 +99,21 @@ test("Neron dashboard code does not use random or Ollama data sources", () => {
   }
 });
 
+test("dashboard identity is loaded from self-model context", () => {
+  const layout = readFileSync(
+    join(process.cwd(), "client/src/components/HudLayout.tsx"),
+    "utf8",
+  );
+  const api = readFileSync(
+    join(process.cwd(), "client/src/services/neron-api.ts"),
+    "utf8",
+  );
+
+  assert.equal(layout.includes("Neron Dashboard"), false);
+  assert.equal(layout.includes("getIdentity"), true);
+  assert.equal(api.includes('requestNeron<NeronRecord>("/self-model/context")'), true);
+});
+
 function jsonResponse(payload: unknown, status = 200): Response {
   return new Response(JSON.stringify(payload), {
     status,
